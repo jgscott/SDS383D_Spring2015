@@ -1,4 +1,3 @@
-- data: NA
-- data: NA
-- data: NA
-- data: 
+- data: droslong.csv
+- data: ethanol.csv
+- data: weather.csv
