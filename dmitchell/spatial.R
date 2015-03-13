@@ -15,7 +15,8 @@ matern <- function(d, tausq, b){ d <- sqrt(5)*d/b; tausq*(1+d+d*d/3)*exp(-d) }
 #   newx is a SpatialPoints object with prediction locations (longlat)
 #   cov.fun is a covariance function
 #   theta is null or a list of hyperparameters (tausq, b, sigsq)
-# returns a list of hyperparameters and posterior mean and SD at prediction locations
+#
+# returns hyperparameters and the posterior mean and SD at prediction locations
 smooth <- function(y, x, newx, cov.fun, theta=NULL){
   n <- length(x)
   m <- length(newx)
@@ -32,7 +33,7 @@ smooth <- function(y, x, newx, cov.fun, theta=NULL){
     log(det(cmat)) + t(y) %*% solve(cmat) %*% y
   }
 
-  # use empirical bayes to estimate hyperparameters if not given
+  # use empirical bayes to estimate hyperparameters if none given
   if(is.null(theta)){
     u <- exp(optim(c(0,0,0), objective)$par)
     theta <- list(tausq=u[1], b=u[2], sigsq=u[3])
@@ -44,7 +45,7 @@ smooth <- function(y, x, newx, cov.fun, theta=NULL){
   # precision matrix
   s[1:n,1:n] <- solve(s[1:n,1:n]+diag(theta$sigsq,n))
 
-  # posterior mean and standard deviation. it would be nice to parallelize this.
+  # posterior mean and standard deviation
   p <- matrix(0, nrow=m, ncol=2)
   for(i in 1:m){
     p[i,1] <- s[,n+i] %*% s[1:n,1:n] %*% y
