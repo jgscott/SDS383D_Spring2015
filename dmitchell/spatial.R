@@ -26,24 +26,23 @@ smooth <- function(y, x, newx, cov.fun, theta=NULL, scale=TRUE){
   for(i in 1:n) s[,i] <- spDistsN1(x, x[i,], longlat=T)
   for(i in 1:m) s[,n+i] <- spDistsN1(x, newx[i,], longlat=T)
 
-  # negative log marginal likelihood for empirical bayes
-  objective <- function(u, z){
-    tausq <- exp(u[1]); b <- exp(u[2]); sigsq <- exp(u[3])
-    cmat <- cov.fun(s[1:n,1:n], tausq, b) + diag(sigsq, n)
-    log(det(cmat)) + t(z) %*% solve(cmat) %*% z
-  }
-
-  # use empirical bayes to estimate hyperparameters if none given
+  # use empirical bayes to select hyperparameters if none given
   if(is.null(theta)){
     if(scale) z <- scale(y) else z <- y
-    u <- exp(optim(c(0,0,0), function(u) objective(u,z))$par)
+
+    # negative log marginal likelihood
+    objective <- function(u){
+      tausq <- exp(u[1]); b <- exp(u[2]); sigsq <- exp(u[3])
+      cmat <- cov.fun(s[1:n,1:n], tausq, b) + diag(sigsq, n)
+      log(det(cmat)) + t(z) %*% solve(cmat) %*% z
+    }
+
+    u <- exp(optim(c(0,0,0), objective)$par)
     theta <- list(tausq=u[1], b=u[2], sigsq=u[3])
   }
 
-  # evaluate covariance function for all distances
+  # evaluate covariance function and calculate precision matrix
   s <- cov.fun(s, theta$tausq, theta$b)
-
-  # precision matrix
   s[1:n,1:n] <- solve(s[1:n,1:n]+diag(theta$sigsq,n))
 
   # posterior mean and standard deviation
@@ -67,12 +66,12 @@ demo <- function(){
   newx <- rasterToPoints(R, spatial=TRUE)
 
   # smooth temperature
-  sm <- smooth(weather$temperature, weather, newx, matern)
+  s <- smooth(weather$temperature, weather, newx, matern)
   R <- setValues(R, sm$mean, layer=1)
   R <- setValues(R, sm$sd, layer=2)
 
   # smooth pressure
-  sm <- smooth(weather$pressure, weather, newx, matern)
+  s <- smooth(weather$pressure, weather, newx, matern)
   R <- setValues(R, sm$mean, layer=3)
   R <- setValues(R, sm$sd, layer=4)
 
@@ -84,6 +83,7 @@ library(RColorBrewer)
 
 spectral.colors <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
 heat.colors <- colorRampPalette(rev(brewer.pal(9, "YlOrRd")))
+blue.colors <- colorRampPalette(brewer.pal(9, "Blue"))
 
 R <- demo()
 levelplot(R, layer=1, col.regions=spectral.colors, contour=T, margin=F, xlab="Longitude", ylab="Latitude", main="Temperature")
