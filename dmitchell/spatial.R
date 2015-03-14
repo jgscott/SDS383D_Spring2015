@@ -67,13 +67,13 @@ demo <- function(){
 
   # smooth temperature
   s <- smooth(weather$temperature, weather, newx, matern)
-  R <- setValues(R, sm$mean, layer=1)
-  R <- setValues(R, sm$sd, layer=2)
+  R <- setValues(R, s$mean, layer=1)
+  R <- setValues(R, s$sd, layer=2)
 
   # smooth pressure
   s <- smooth(weather$pressure, weather, newx, matern)
-  R <- setValues(R, sm$mean, layer=3)
-  R <- setValues(R, sm$sd, layer=4)
+  R <- setValues(R, s$mean, layer=3)
+  R <- setValues(R, s$sd, layer=4)
 
   return(R)
 }
