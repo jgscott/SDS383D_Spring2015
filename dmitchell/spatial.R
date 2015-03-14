@@ -15,7 +15,7 @@ matern <- function(d, tausq, b){ d <- sqrt(5)*d/b; tausq*(1+d+d*d/3)*exp(-d) }
 #   newx is a SpatialPoints object with prediction locations (longlat)
 #   cov.fun is a covariance function
 #   theta is null or a list of hyperparameters (tausq, b, sigsq)
-#
+#   if scale is true, then y is scaled before maximizing the marginal likelihood
 # returns hyperparameters and the posterior mean and SD at prediction locations
 smooth <- function(y, x, newx, cov.fun, theta=NULL, scale=TRUE){
   n <- length(x)
@@ -83,7 +83,6 @@ library(RColorBrewer)
 
 spectral.colors <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
 heat.colors <- colorRampPalette(rev(brewer.pal(9, "YlOrRd")))
-blue.colors <- colorRampPalette(brewer.pal(9, "Blue"))
 
 R <- demo()
 levelplot(R, layer=1, col.regions=spectral.colors, contour=T, margin=F, xlab="Longitude", ylab="Latitude", main="Temperature")
