@@ -48,7 +48,7 @@ smooth <- function(y, x, kernel=dnorm, bw=NULL){
 
   # return a smooth object
   result <- list(y=y, x=x, bandwidth=h, sigsq=sigsq, residuals=r, fitted=yhat, se.fit=se.fit, predict=predict)
-  strucure(result, class="smooth")
+  structure(result, class="smooth")
 }
 
 fitted.smooth <- function(object) object$fitted
