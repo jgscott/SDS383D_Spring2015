@@ -41,19 +41,14 @@ smooth <- function(y, x, kernel=dnorm, bw=NULL){
   sigsq <- sum(r*r)/(length(y)-2*sum(diag(H))-sum(diag(t(H)%*%H)))
   se.fit <- sqrt(sigsq*rowSums(H*H))
 
+  predict <- function(z){
+    H <- hatmat(z,h)
+    list(fit=as.vector(H%*%y), se.fit=sqrt(sigsq*rowSums(H*H)))
+  }
+
   # return a smooth object
-  result <- list(y=y,
-                 x=x,
-                 bandwidth=h,
-                 sigsq=sigsq,
-                 residuals=r,
-                 fitted=yhat,
-                 se.fit=se.fit,
-                 predict=function(newx){
-                   H <- hatmat(newx,h)
-                   list(fit=as.vector(H%*%y), se.fit=sqrt(sigsq*rowSums(H*H)))
-                 })
-  structure(result, class="smooth")
+  result <- list(y=y, x=x, bandwidth=h, sigsq=sigsq, residuals=r, fitted=yhat, se.fit=se.fit, predict=predict)
+  strucure(result, class="smooth")
 }
 
 fitted.smooth <- function(object) object$fitted
