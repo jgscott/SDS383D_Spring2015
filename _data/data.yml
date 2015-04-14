@@ -2,6 +2,7 @@
 - data: cheese.csv
 - data: droslong.csv
 - data: ethanol.csv
+- data: galaxies.txt
 - data: mathtest.csv
 - data: polls.csv
 - data: weather.csv
