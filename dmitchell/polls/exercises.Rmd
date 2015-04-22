@@ -1,0 +1,133 @@
+---
+title: "Modeling II Exercises 4"
+author: "Daniel Lewis Mitchell"
+date: "April 18, 2015"
+output: html_document
+---
+
+## Data Augmentation
+
+```{r include=FALSE}
+library(knitr)
+opts_chunk$set(echo=FALSE, message=FALSE)
+
+library(lattice)
+library(latticeExtra)
+lattice.options(default.theme=canonical.theme(color=FALSE))
+
+library(mvtnorm)
+
+# Data preprocessing
+polls <- read.csv("polls.csv")
+polls <- polls[complete.cases(polls),4:9]
+rownames(polls) <- 1:nrow(polls)
+colnames(polls) <- c("vote","state","edu","age","sex","eth")
+polls$vote <- factor(1-polls$vote, labels=c("Bush","Other"))
+polls$sex <- factor(polls$sex, labels=c("Male","Female"))
+polls$eth <- factor(polls$eth, labels=c("Nonblack","Black"))
+polls <- polls[order(polls$vote),]
+```
+
+```{r fig.width=9, fig.align="center"}
+x <- prop.table(do.call(rbind, apply(polls[,c(5,6,3,4)], 2, table, polls$vote)), 1)
+barchart(x, horizontal=FALSE, stack=FALSE, ylab="", auto.key=list(columns=2))
+```
+
+```{r fig.height=9, fig.align="center"}
+x <- table(polls$state)
+x <- x[order(x)]
+dotplot(x, xlab="")
+```
+
+```{r echo=TRUE}
+rtruncnorm <- function(n, a=-Inf, b=Inf, mean=0, sd=1){
+  qnorm(runif(n, pnorm(a, mean, sd), pnorm(b, mean, sd)), mean, sd)
+}
+
+mcmc <- function(niter){
+  s <- as.numeric(polls$state)
+  m <- table(polls$vote)
+  X <- model.matrix(~sex+eth+age+edu, polls)
+  n <- table(polls$state)
+  N <- length(n)
+  
+  sample.tausq <- function(mu){
+    1/rgamma(1, 1+N/2, sum(mu^2)/2)
+  }
+
+  sample.mu <- function(z, beta, tausq){
+    mu <- rep(0,N)
+    for(i in 1:N){
+      k <- as.numeric(polls$state) == i
+      B <- 1/(1/tausq + n[i])
+      b <- sum(z[k]-X[k,]%*%beta)
+      mu[i] <- rnorm(1, B*b, sqrt(B))
+    }
+    return(mu)
+  }
+  
+  sample.z <- function(mu, beta){
+    mu <- mu[s]
+    z <- rep(0,sum(n))
+    for(i in 1:m[1]) z[i] <- rtruncnorm(1, a=0, mean=mu[i] + X[i,] %*% beta)
+    for(i in m[1]+1:m[2]) z[i] <- rtruncnorm(1, b=0, mean=mu[i] + X[i,] %*% beta)
+    return(z)
+  }
+
+  sample.beta <- function(z, mu){
+    B <- solve(t(X) %*% X)
+    b <- t(X) %*% (z - mu[s])
+    rmvnorm(1, B %*% b, B)[1,]
+  }
+
+  z <- rbinom(sum(n), 1, 0.5)
+  mu <- rep(0, N)
+  tausq <- 1
+  beta <- rep(0, ncol(X))
+  
+  chains <- matrix(0, nrow=niter, ncol=ncol(X)+N+1)
+  for(it in 1:niter){
+    z <- sample.z(mu, beta)
+    mu <- sample.mu(z, beta, tausq)
+    tausq <- sample.tausq(mu)
+    beta <- sample.beta(z, mu)
+    chains[it,] <- c(beta, mu, tausq)
+  }
+  
+  list(beta=chains[,1:ncol(X)], mu=chains[,ncol(X)+1:N], tausq=chains[,ncol(X)+N+1])  
+}
+```
+
+```{r fig.height=9, fig.align="center"}
+out <- mcmc(500)
+ind <- 101:500
+rf <- aggregate(vote ~ state, polls, length)
+rf <- within(rf, {
+  mean <- colMeans(out$mu[ind,])
+  sd <- apply(out$mu[ind,], 2, sd)
+  lower <- mean - 2*sd
+  upper <- mean + 2*sd
+  cex <- seq(0.6,2.4,length=5)[cut(vote,5)]
+})
+dotplot(reorder(state,mean) ~ mean, rf, xlim=c(-1,1), xlab="", panel=function(x,y){
+  panel.dotplot(x,y, cex=rf$cex)
+  panel.arrows(rf$lower, y, rf$upper, y, angle=90, code=3, length=0.05)
+  panel.abline(v=0, lty=1, col="lightgray")
+})
+```
+
+```{r fig.align="center"}
+betas <- data.frame(id=1:9)
+betas <- within(betas, {
+  beta <- c("(intercept)", "Female", "Black", "30to44", "45to64", "65plus", "HS", "NoHS", "SomeColl")
+  mean <- colMeans(out$beta[ind,])
+  sd <- apply(out$beta[ind,], 2, sd)
+  lower <- mean - 2*sd
+  upper <- mean + 2*sd  
+})
+dotplot(reorder(beta,id) ~ mean, betas, xlim=c(-1.5,0.75), xlab="", panel=function(x,y){
+  panel.dotplot(x,y)
+  panel.arrows(betas$lower, y, betas$upper, y, angle=90, code=3, length=0.05)
+  panel.abline(v=0, lty=1, col="lightgray")
+})
+```
